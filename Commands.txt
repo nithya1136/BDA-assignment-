@@ -1,0 +1,60 @@
+mkdir ~/canteen_project
+cd ~/canteen_project
+
+nano generate_data.py
+python3 generate_data.py
+
+head canteen_transactions.csv
+
+sudo systemctl start cassandra
+sudo systemctl enable cassandra
+sudo systemctl status cassandra
+
+cqlsh
+
+CREATE KEYSPACE IF NOT EXISTS canteen
+WITH replication = {'class':'SimpleStrategy', 'replication_factor':1};
+
+USE canteen;
+
+-- Main transaction table
+CREATE TABLE IF NOT EXISTS transactions (
+  transaction_id text PRIMARY KEY,
+  ts timestamp,
+  user_id text,
+  items list<text>
+);
+
+-- Counter tables for analytics
+CREATE TABLE IF NOT EXISTS item_counts (
+  item text PRIMARY KEY,
+  count counter
+);
+
+CREATE TABLE IF NOT EXISTS daily_item_counts (
+  day text,
+  item text,
+  count counter,
+  PRIMARY KEY (day, item)
+);
+
+CREATE TABLE IF NOT EXISTS item_pairs (
+  pair text PRIMARY KEY,
+  count counter
+);
+
+exit;
+
+nano load_to_cassandra.py
+python3 load_to_cassandra.py
+
+cqlsh
+USE canteen;
+SELECT * FROM transactions LIMIT 5;
+SELECT * FROM item_counts LIMIT 5;
+
+nano analytics_from_cassandra.py
+python3 analytics_from_cassandra.py
+
+nano streamlit_app.py
+streamlit run streamlit_app.py
